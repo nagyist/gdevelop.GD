@@ -11,28 +11,15 @@ import useDismissableTutorialMessage from '../Hints/useDismissableTutorialMessag
 import { Column, Line } from '../UI/Grid';
 import VariablesList from './VariablesList';
 import HelpButton from '../UI/HelpButton';
-import { getVariableContextFromNodeId } from './VariableToTreeNodeHandling';
+import { getVariablePathFromNodeId } from './VariableToTreeNodeHandling';
 import { Tabs } from '../UI/Tabs';
 import { useResponsiveWindowSize } from '../UI/Responsive/ResponsiveWindowMeasurer';
-import { ProjectScopedContainersAccessor } from '../InstructionOrExpression/EventsScope.flow';
+import { ProjectScopedContainersAccessor } from '../InstructionOrExpression/EventsScope';
 import { insertInVariablesContainer } from '../Utils/VariablesUtils';
 import { getRootVariableName } from '../EventsSheet/ParameterFields/VariableField';
 import { getNodeIdFromVariableName } from './VariableToTreeNodeHandling';
 
 const gd: libGDevelop = global.gd;
-
-const getVariablePathFromNodeId = (
-  nodeId: string,
-  variablesContainer: gdVariablesContainer
-): string => {
-  const variableContext = getVariableContextFromNodeId(
-    nodeId,
-    variablesContainer
-  );
-  const variablePath = variableContext.lineage.map(variable => variable.name);
-  variablePath.push(variableContext.name);
-  return variablePath.join('.');
-};
 
 type TabProps = {
   id: string,

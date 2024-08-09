@@ -12,7 +12,7 @@ import { type GroupWithContext } from '../../ObjectsList/EnumerateObjects';
 import { type UnsavedChanges } from '../../MainFrame/UnsavedChangesContext';
 import newNameGenerator from '../../Utils/NewNameGenerator';
 import { type ExtensionItemConfigurationAttribute } from '../../EventsFunctionsExtensionEditor';
-import { ProjectScopedContainersAccessor } from '../../InstructionOrExpression/EventsScope.flow';
+import { ProjectScopedContainersAccessor } from '../../InstructionOrExpression/EventsScope';
 
 const gd: libGDevelop = global.gd;
 
@@ -133,6 +133,7 @@ export default class EventsFunctionConfigurationEditor extends React.Component<
   render() {
     const {
       project,
+      projectScopedContainersAccessor,
       objectsContainer,
       eventsFunction,
       eventsBasedBehavior,
@@ -218,6 +219,7 @@ export default class EventsFunctionConfigurationEditor extends React.Component<
         {this.state.currentTab === 'groups' ? (
           <ObjectGroupsListWithObjectGroupEditor
             project={project}
+            projectScopedContainersAccessor={projectScopedContainersAccessor}
             globalObjectsContainer={null}
             objectsContainer={objectsContainer}
             globalObjectGroups={null}

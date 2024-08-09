@@ -17,7 +17,7 @@ import { type EditorId } from '.';
 import Rectangle from '../Utils/Rectangle';
 import ViewPosition from '../InstancesEditor/ViewPosition';
 import { type ObjectFolderOrObjectWithContext } from '../ObjectsList/EnumerateObjectFolderOrObject';
-import { ProjectScopedContainersAccessor } from '../InstructionOrExpression/EventsScope.flow';
+import { ProjectScopedContainersAccessor } from '../InstructionOrExpression/EventsScope';
 import { type TileMapTileSelection } from '../InstancesEditor/TileSetVisualizer';
 
 export type SceneEditorsDisplayProps = {|
@@ -47,6 +47,7 @@ export type SceneEditorsDisplayProps = {|
   onRemoveLayer: (layerName: string, done: (boolean) => void) => void,
   onLayerRenamed: () => void,
   onObjectCreated: gdObject => void,
+  onObjectEdited: gdObject => void,
   onObjectFolderOrObjectWithContextSelected: (
     ?ObjectFolderOrObjectWithContext
   ) => void,
@@ -65,6 +66,7 @@ export type SceneEditorsDisplayProps = {|
     newName: string,
     done: (boolean) => void
   ) => void,
+  onCreateObjectGroup: () => void,
   onEditObjectGroup: (?gdObjectGroup) => void,
   onDeleteObjectGroup: (
     groupWithContext: GroupWithContext,
@@ -125,6 +127,7 @@ export type SceneEditorsDisplayInterface = {|
   forceUpdateInstancesPropertiesEditor: () => void,
   forceUpdateObjectsList: () => void,
   forceUpdateObjectGroupsList: () => void,
+  scrollObjectGroupsListToObjectGroup: (objectGroup: gdObjectGroup) => void,
   forceUpdateLayersList: () => void,
   openNewObjectDialog: () => void,
   toggleEditorView: (editorId: EditorId) => void,

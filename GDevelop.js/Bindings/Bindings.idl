@@ -226,6 +226,7 @@ interface PairStringVariable {
 
 enum Variable_Type {
     "Variable::Unknown",
+    "Variable::MixedTypes",
     "Variable::String",
     "Variable::Number",
     "Variable::Boolean",
@@ -264,6 +265,7 @@ interface Variable {
     double GetValue();
     void SetBool([Const] boolean val);
     boolean GetBool();
+    boolean HasMixedValues();
     void SetFolded(boolean val);
     boolean IsFolded();
 
@@ -350,6 +352,16 @@ interface ObjectGroup {
 
     void SerializeTo([Ref] SerializerElement element);
     void UnserializeFrom([Const, Ref] SerializerElement element);
+};
+
+interface GroupVariableHelper {
+    [Value] VariablesContainer STATIC_MergeVariableContainers(
+        [Const, Ref] ObjectsContainersList objectsContainersList,
+        [Const, Ref] ObjectGroup objectGroup);
+    void STATIC_FillAnyVariableBetweenObjects(
+        [Ref] ObjectsContainer globalObjectsContainer,
+        [Ref] ObjectsContainer objectsContainer,
+        [Const, Ref] ObjectGroup objectGroup);
 };
 
 interface ObjectGroupsContainer {
@@ -647,6 +659,7 @@ interface ObjectsContainersList {
   [Const, Value] DOMString GetTypeOfObject([Const] DOMString objectName);
   [Const, Value] DOMString GetTypeOfBehavior([Const] DOMString name, boolean searchInGroups);
   [Value] VectorString GetBehaviorsOfObject([Const] DOMString name, boolean searchInGroups);
+  [Value] VectorString GetAnimationNamesOfObject([Const] DOMString name);
   [Const, Value] DOMString GetTypeOfBehaviorInObjectOrGroup([Const] DOMString objectOrGroupName, [Const] DOMString behaviorName, boolean searchInGroups);
   boolean HasObjectOrGroupNamed([Const] DOMString name);
 
@@ -772,6 +785,8 @@ interface ObjectConfiguration {
     [Value] UniquePtrObjectConfiguration Clone();
 
     [Const, Ref] DOMString GetType();
+    // SetType must only be used by tests.
+    void SetType([Const] DOMString typeName);
 
     [Value] MapStringPropertyDescriptor GetProperties();
     boolean UpdateProperty([Const] DOMString name, [Const] DOMString value);
@@ -787,6 +802,8 @@ interface ObjectConfiguration {
 
     void SerializeTo([Ref] SerializerElement element);
     void UnserializeFrom([Ref] Project project, [Const, Ref] SerializerElement element);
+
+    unsigned long GetAnimationsCount();
 };
 
 interface UniquePtrObjectConfiguration {
@@ -2346,6 +2363,14 @@ interface WholeProjectRefactorer {
       [Ref] VariablesContainer newVariablesContainer,
       [Const, Ref] VariablesChangeset changeset,
       [Const, Ref] SerializerElement originalSerializedVariables);
+    void STATIC_ApplyRefactoringForGroupVariablesContainer(
+      [Ref] Project project,
+      [Ref] ObjectsContainer globalObjectsContainer,
+      [Ref] ObjectsContainer objectsContainer,
+      [Const, Ref] VariablesContainer groupVariablesContainer,
+      [Const, Ref] ObjectGroup objectGroup,
+      [Const, Ref] VariablesChangeset changeset,
+      [Const, Ref] SerializerElement originalSerializedVariables);
     void STATIC_RenameEventsFunctionsExtension(
       [Ref] Project project,
       [Const, Ref] EventsFunctionsExtension eventsFunctionsExtension,
@@ -3304,6 +3329,8 @@ interface SpriteObject {
 
     void SetUpdateIfNotVisible(boolean updateIfNotVisible);
     boolean GetUpdateIfNotVisible();
+    void SetPreScale(double value);
+    double GetPreScale();
 };
 SpriteObject implements ObjectConfiguration;
 

@@ -871,8 +871,13 @@ gd::String EventsCodeGenerator::GenerateObjectAction(
   // Create call
   gd::String call;
   if (instrInfos.codeExtraInformation.type == "number" ||
-      instrInfos.codeExtraInformation.type == "string" || 
-      instrInfos.codeExtraInformation.type == "boolean") {
+      instrInfos.codeExtraInformation.type == "string" ||
+      // Boolean actions declared with addExpressionAndConditionAndAction uses
+      // MutatorAndOrAccessor even though they don't declare an operator parameter.
+      // Boolean operators are only used with SetMutators or SetCustomCodeGenerator.
+      (instrInfos.codeExtraInformation.type == "boolean" &&
+       instrInfos.codeExtraInformation.accessType ==
+           gd::InstructionMetadata::ExtraInformation::AccessType::Mutators)) {
     if (instrInfos.codeExtraInformation.accessType ==
         gd::InstructionMetadata::ExtraInformation::MutatorAndOrAccessor)
       call = GenerateOperatorCall(
@@ -932,9 +937,14 @@ gd::String EventsCodeGenerator::GenerateBehaviorAction(
 
   // Create call
   gd::String call;
-  if ((instrInfos.codeExtraInformation.type == "number" ||
-       instrInfos.codeExtraInformation.type == "string" || 
-      instrInfos.codeExtraInformation.type == "boolean")) {
+  if (instrInfos.codeExtraInformation.type == "number" ||
+      instrInfos.codeExtraInformation.type == "string" ||
+      // Boolean actions declared with addExpressionAndConditionAndAction uses
+      // MutatorAndOrAccessor even though they don't declare an operator parameter.
+      // Boolean operators are only used with SetMutators or SetCustomCodeGenerator.
+      (instrInfos.codeExtraInformation.type == "boolean" &&
+       instrInfos.codeExtraInformation.accessType ==
+           gd::InstructionMetadata::ExtraInformation::AccessType::Mutators)) {
     if (instrInfos.codeExtraInformation.accessType ==
         gd::InstructionMetadata::ExtraInformation::MutatorAndOrAccessor)
       call = GenerateOperatorCall(

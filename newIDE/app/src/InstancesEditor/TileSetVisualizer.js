@@ -1,6 +1,7 @@
 // @flow
 
 import * as React from 'react';
+import { t } from '@lingui/macro';
 import { createStyles, makeStyles } from '@material-ui/core/styles';
 import { Column, Line, Spacer } from '../UI/Grid';
 import { CorsAwareImage } from '../UI/CorsAwareImage';
@@ -16,7 +17,13 @@ import { useLongTouch, type ClientCoordinates } from '../Utils/UseLongTouch';
 import Text from '../UI/Text';
 
 const styles = {
-  tileContainer: {
+  tilesetAndTooltipsContainer: {
+    flex: 1,
+    display: 'flex',
+    position: 'relative',
+    width: '100%',
+  },
+  tilesetContainer: {
     flex: 1,
     position: 'relative',
     display: 'flex',
@@ -31,9 +38,6 @@ const styles = {
     border: '1px solid black',
     color: 'black',
     padding: '1px 3px',
-  },
-  tooltipAnchor: {
-    position: 'relative',
   },
 };
 
@@ -69,12 +73,12 @@ type TileMapCoordinates = {| x: number, y: number |};
 export const getTileIdFromGridCoordinates = ({
   x,
   y,
-  rowCount,
+  columnCount,
 }: {|
   x: number,
   y: number,
-  rowCount: number,
-|}): number => x * rowCount + y;
+  columnCount: number,
+|}): number => y * columnCount + x;
 
 /**
  * Returns the coordinates of a tile in a tile set given its id.
@@ -89,13 +93,13 @@ export const getTileIdFromGridCoordinates = ({
  */
 export const getGridCoordinatesFromTileId = ({
   id,
-  rowCount,
+  columnCount,
 }: {|
   id: number,
-  rowCount: number,
+  columnCount: number,
 |}): {| x: number, y: number |} => {
-  const y = id % rowCount;
-  const x = (id - y) / rowCount;
+  const x = id % columnCount;
+  const y = (id - x) / columnCount;
   return { x, y };
 };
 
@@ -126,10 +130,15 @@ const getImageCoordinatesFromPointerEvent = (
   }
 
   const bounds = divContainer.getBoundingClientRect();
-
-  const mouseX = event.clientX + divContainer.scrollLeft - bounds.left + 1;
+  const mouseXWithoutScrollLeft = event.clientX - bounds.left + 1;
+  const mouseX = mouseXWithoutScrollLeft + divContainer.scrollLeft;
   const mouseY = event.clientY - bounds.top + 1;
-  return { mouseX, mouseY };
+  return {
+    mouseX,
+    mouseY,
+    mouseXWithoutScrollLeft,
+    parentRightBound: bounds.right,
+  };
 };
 
 const addOrRemoveCoordinatesInArray = (
@@ -154,8 +163,6 @@ type TileProps = {|
   highlighted?: boolean,
   width?: number,
   height?: number,
-  title?: string,
-  displayTooltip?: boolean,
 |};
 
 const Tile = ({
@@ -165,14 +172,8 @@ const Tile = ({
   width = 1,
   height = 1,
   highlighted,
-  title,
-  displayTooltip,
 }: TileProps) => {
   const classes = useStylesForTile(!!highlighted);
-  // Tooltip position has to be adapted because the image is in a overflow auto parent
-  // that hides the tooltip if it is displayed outside of itself.
-  const position =
-    x <= 1 && y <= 1 ? { right: -30 } : y <= 1 ? { left: -40 } : { top: -40 };
   return (
     <div
       className={classes.tile}
@@ -182,23 +183,7 @@ const Tile = ({
         width: size * width,
         height: size * height,
       }}
-      title={title}
-    >
-      {displayTooltip && (
-        <div style={styles.tooltipAnchor}>
-          <div
-            style={{
-              ...styles.tooltipContent,
-              ...position,
-            }}
-          >
-            <Text color="inherit" noMargin>
-              {title}
-            </Text>
-          </div>
-        </div>
-      )}
-    </div>
+    />
   );
 };
 
@@ -258,7 +243,13 @@ const TileSetVisualizer = ({
     lastSelectedTile,
     setLastSelectedTile,
   ] = React.useState<?TileMapCoordinates>(null);
-  const tileContainerRef = React.useRef<?HTMLDivElement>(null);
+  const tilesetContainerRef = React.useRef<?HTMLDivElement>(null);
+  const tilesetAndTooltipContainerRef = React.useRef<?HTMLDivElement>(null);
+  const [tooltipContent, setTooltipContent] = React.useState<?{|
+    label: string,
+    x: number,
+    y: number,
+  |}>(null);
   const columnCount = parseFloat(
     objectConfiguration
       .getProperties()
@@ -282,10 +273,7 @@ const TileSetVisualizer = ({
   const [shouldCancelClick, setShouldCancelClick] = React.useState<boolean>(
     false
   );
-  const [
-    tileIdDisplayGridCoordinates,
-    setTileIdDisplayGridCoordinates,
-  ] = React.useState<?TileMapCoordinates>(null);
+  const tooltipDisplayTimeoutId = React.useRef<?TimeoutID>(null);
   const [
     rectangularSelectionTilePreview,
     setRectangularSelectionTilePreview,
@@ -299,8 +287,8 @@ const TileSetVisualizer = ({
     x: number,
     y: number,
   }>(null);
-  const imageElement = tileContainerRef.current
-    ? tileContainerRef.current.getElementsByTagName('img')[0]
+  const imageElement = tilesetContainerRef.current
+    ? tilesetContainerRef.current.getElementsByTagName('img')[0]
     : null;
   const imageWidth = imageElement
     ? parseFloat(getComputedStyle(imageElement).width.replace('px', ''))
@@ -322,8 +310,14 @@ const TileSetVisualizer = ({
         rowCount,
         displayedTileSize,
       });
-
-      setTileIdDisplayGridCoordinates({ x, y });
+      setTooltipContent({
+        x: Math.min(
+          imageCoordinates.mouseXWithoutScrollLeft,
+          imageCoordinates.parentRightBound - 40
+        ),
+        y: imageCoordinates.mouseY,
+        label: getTileIdFromGridCoordinates({ x, y, columnCount }).toString(),
+      });
     },
     [displayedTileSize, columnCount, rowCount]
   );
@@ -405,7 +399,6 @@ const TileSetVisualizer = ({
         if (!displayedTileSize) return;
         if (shouldCancelClick) {
           setShouldCancelClick(false);
-          setTileIdDisplayGridCoordinates(null);
           return;
         }
 
@@ -553,8 +546,69 @@ const TileSetVisualizer = ({
     [displayedTileSize, columnCount, rowCount]
   );
 
+  const onMouseMove = React.useCallback(
+    event => {
+      if (!displayedTileSize) return;
+      onHoverAtlas(event);
+      if (tooltipDisplayTimeoutId.current)
+        clearTimeout(tooltipDisplayTimeoutId.current);
+      const imageCoordinates = getImageCoordinatesFromPointerEvent(event);
+
+      if (!imageCoordinates) return;
+
+      const { x, y } = getGridCoordinatesFromPointerCoordinates({
+        pointerX: imageCoordinates.mouseX,
+        pointerY: imageCoordinates.mouseY,
+        columnCount,
+        rowCount,
+        displayedTileSize,
+      });
+
+      tooltipDisplayTimeoutId.current = setTimeout(() => {
+        setTooltipContent({
+          x: Math.min(
+            imageCoordinates.mouseXWithoutScrollLeft,
+            imageCoordinates.parentRightBound - 40
+          ),
+          y: imageCoordinates.mouseY,
+          label: getTileIdFromGridCoordinates({ x, y, columnCount }).toString(),
+        });
+      }, 500);
+    },
+    [onHoverAtlas, rowCount, columnCount, displayedTileSize]
+  );
+  const onMouseEnter = React.useCallback(
+    event => {
+      if (!displayedTileSize) return;
+      const imageCoordinates = getImageCoordinatesFromPointerEvent(event);
+
+      if (!imageCoordinates) return;
+      const { x, y } = getGridCoordinatesFromPointerCoordinates({
+        pointerX: imageCoordinates.mouseX,
+        pointerY: imageCoordinates.mouseY,
+        columnCount,
+        rowCount,
+        displayedTileSize,
+      });
+
+      tooltipDisplayTimeoutId.current = setTimeout(() => {
+        setTooltipContent({
+          x: imageCoordinates.mouseXWithoutScrollLeft,
+          y: imageCoordinates.mouseY,
+          label: getTileIdFromGridCoordinates({ x, y, columnCount }).toString(),
+        });
+      }, 500);
+    },
+    [rowCount, columnCount, displayedTileSize]
+  );
+
+  const onMouseLeave = React.useCallback(() => {
+    if (tooltipDisplayTimeoutId.current)
+      clearTimeout(tooltipDisplayTimeoutId.current);
+    setTooltipContent(null);
+  }, []);
+
   const interactionCallbacks = {
-    onMouseMove: onHoverAtlas,
     onPointerDown,
     onPointerUp,
     onPointerMove,
@@ -568,6 +622,7 @@ const TileSetVisualizer = ({
             <LineStackLayout alignItems="center" noMargin>
               <IconButton
                 size="small"
+                tooltip={t`Paint`}
                 selected={
                   !!tileMapTileSelection &&
                   tileMapTileSelection.kind === 'single'
@@ -591,6 +646,7 @@ const TileSetVisualizer = ({
               </IconButton>
               <IconButton
                 size="small"
+                tooltip={t`Horizontal flip`}
                 selected={shouldFlipHorizontally}
                 disabled={
                   !tileMapTileSelection ||
@@ -614,6 +670,7 @@ const TileSetVisualizer = ({
               </IconButton>
               <IconButton
                 size="small"
+                tooltip={t`Vertical flip`}
                 selected={shouldFlipVertically}
                 disabled={
                   !tileMapTileSelection ||
@@ -638,6 +695,7 @@ const TileSetVisualizer = ({
             </LineStackLayout>
             <IconButton
               size="small"
+              tooltip={t`Erase`}
               selected={
                 !!tileMapTileSelection && tileMapTileSelection.kind === 'erase'
               }
@@ -659,101 +717,96 @@ const TileSetVisualizer = ({
       <Line justifyContent="stretch" noMargin>
         {atlasResourceName && (
           <div
-            style={styles.tileContainer}
-            ref={tileContainerRef}
-            {...(interactive ? interactionCallbacks : undefined)}
-            {...longTouchProps}
+            style={styles.tilesetAndTooltipsContainer}
+            ref={tilesetAndTooltipContainerRef}
           >
-            <CorsAwareImage
-              style={styles.atlasImage}
-              alt={atlasResourceName}
-              src={ResourcesLoader.getResourceFullUrl(
-                project,
-                atlasResourceName,
-                {}
-              )}
-              onLoad={e => {
-                if (onAtlasImageLoaded)
-                  onAtlasImageLoaded(e, atlasResourceName);
-              }}
-            />
-
-            {interactive && hoveredTile && displayedTileSize && (
-              <Tile
-                key={`hovered-tile`}
-                size={displayedTileSize}
-                x={hoveredTile.x}
-                y={hoveredTile.y}
-                title={getTileIdFromGridCoordinates({
-                  x: hoveredTile.x,
-                  y: hoveredTile.y,
-                  rowCount,
-                }).toString()}
+            <div
+              style={styles.tilesetContainer}
+              ref={tilesetContainerRef}
+              {...(interactive ? interactionCallbacks : undefined)}
+              {...longTouchProps}
+              onMouseMove={onMouseMove}
+              onMouseEnter={onMouseEnter}
+              onMouseLeave={onMouseLeave}
+            >
+              <CorsAwareImage
+                style={styles.atlasImage}
+                alt={atlasResourceName}
+                src={ResourcesLoader.getResourceFullUrl(
+                  project,
+                  atlasResourceName,
+                  {}
+                )}
+                onLoad={e => {
+                  if (onAtlasImageLoaded)
+                    onAtlasImageLoaded(e, atlasResourceName);
+                }}
               />
-            )}
-            {tileMapTileSelection &&
-              tileMapTileSelection.kind === 'single' &&
-              displayedTileSize && (
+
+              {interactive && hoveredTile && displayedTileSize && (
                 <Tile
-                  key={`selected-tile`}
-                  highlighted
+                  key={`hovered-tile`}
                   size={displayedTileSize}
-                  x={tileMapTileSelection.coordinates.x}
-                  y={tileMapTileSelection.coordinates.y}
-                  title={getTileIdFromGridCoordinates({
-                    x: tileMapTileSelection.coordinates.x,
-                    y: tileMapTileSelection.coordinates.y,
-                    rowCount,
-                  }).toString()}
+                  x={hoveredTile.x}
+                  y={hoveredTile.y}
                 />
               )}
-            {tileMapTileSelection &&
-              tileMapTileSelection.kind === 'multiple' &&
-              displayedTileSize &&
-              tileMapTileSelection.coordinates.map(coordinates => {
-                const id = getTileIdFromGridCoordinates({
-                  x: coordinates.x,
-                  y: coordinates.y,
-                  rowCount,
-                });
-                return (
+              {tileMapTileSelection &&
+                tileMapTileSelection.kind === 'single' &&
+                displayedTileSize && (
                   <Tile
-                    key={`selected-tile-${id}`}
+                    key={`selected-tile`}
                     highlighted
                     size={displayedTileSize}
-                    x={coordinates.x}
-                    y={coordinates.y}
-                    title={id.toString()}
+                    x={tileMapTileSelection.coordinates.x}
+                    y={tileMapTileSelection.coordinates.y}
                   />
-                );
-              })}
-            {interactive &&
-              rectangularSelectionTilePreview &&
-              displayedTileSize && (
-                <Tile
-                  key={`preview-tile`}
-                  highlighted
-                  size={displayedTileSize}
-                  x={rectangularSelectionTilePreview.topLeftCoordinates.x}
-                  y={rectangularSelectionTilePreview.topLeftCoordinates.y}
-                  width={rectangularSelectionTilePreview.width}
-                  height={rectangularSelectionTilePreview.height}
-                />
-              )}
-            {tileIdDisplayGridCoordinates && displayedTileSize && (
-              <Tile
-                key={`id-tooltip-tile`}
-                highlighted
-                size={displayedTileSize}
-                x={tileIdDisplayGridCoordinates.x}
-                y={tileIdDisplayGridCoordinates.y}
-                title={getTileIdFromGridCoordinates({
-                  x: tileIdDisplayGridCoordinates.x,
-                  y: tileIdDisplayGridCoordinates.y,
-                  rowCount,
-                }).toString()}
-                displayTooltip
-              />
+                )}
+              {tileMapTileSelection &&
+                tileMapTileSelection.kind === 'multiple' &&
+                displayedTileSize &&
+                tileMapTileSelection.coordinates.map(coordinates => {
+                  const id = getTileIdFromGridCoordinates({
+                    x: coordinates.x,
+                    y: coordinates.y,
+                    columnCount,
+                  });
+                  return (
+                    <Tile
+                      key={`selected-tile-${id}`}
+                      highlighted
+                      size={displayedTileSize}
+                      x={coordinates.x}
+                      y={coordinates.y}
+                    />
+                  );
+                })}
+              {interactive &&
+                rectangularSelectionTilePreview &&
+                displayedTileSize && (
+                  <Tile
+                    key={`preview-tile`}
+                    highlighted
+                    size={displayedTileSize}
+                    x={rectangularSelectionTilePreview.topLeftCoordinates.x}
+                    y={rectangularSelectionTilePreview.topLeftCoordinates.y}
+                    width={rectangularSelectionTilePreview.width}
+                    height={rectangularSelectionTilePreview.height}
+                  />
+                )}
+            </div>
+            {tooltipContent && (
+              <div
+                style={{
+                  ...styles.tooltipContent,
+                  top: tooltipContent.y - 40 - (displayedTileSize || 0) / 5,
+                  left: tooltipContent.x - 5,
+                }}
+              >
+                <Text color="inherit" noMargin>
+                  {tooltipContent.label}
+                </Text>
+              </div>
             )}
           </div>
         )}
