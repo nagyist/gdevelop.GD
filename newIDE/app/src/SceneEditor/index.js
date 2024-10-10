@@ -16,6 +16,7 @@ import SetupGridDialog from './SetupGridDialog';
 import ScenePropertiesDialog from './ScenePropertiesDialog';
 import EventsBasedObjectScenePropertiesDialog from './EventsBasedObjectScenePropertiesDialog';
 import ExtractAsExternalLayoutDialog from './ExtractAsExternalLayoutDialog';
+import ExtractAsCustomObjectDialog from './CustomObjectExtractor/ExtractAsCustomObjectDialog';
 import { type ObjectEditorTab } from '../ObjectEditor/ObjectEditorDialog';
 import MosaicEditorsDisplayToolbar from './MosaicEditorsDisplay/Toolbar';
 import SwipeableDrawerEditorsDisplayToolbar from './SwipeableDrawerEditorsDisplay/Toolbar';
@@ -67,7 +68,10 @@ import {
   type ObjectFolderOrObjectWithContext,
 } from '../ObjectsList/EnumerateObjectFolderOrObject';
 import uniq from 'lodash/uniq';
-import { cleanNonExistingObjectFolderOrObjectWithContexts } from './ObjectFolderOrObjectsSelection';
+import {
+  cleanNonExistingObjectFolderOrObjectWithContexts,
+  getObjectFolderOrObjectWithContextFromObjectName,
+} from './ObjectFolderOrObjectsSelection';
 import {
   registerOnResourceExternallyChangedCallback,
   unregisterOnResourceExternallyChangedCallback,
@@ -75,6 +79,7 @@ import {
 import { unserializeFromJSObject } from '../Utils/Serializer';
 import { ProjectScopedContainersAccessor } from '../InstructionOrExpression/EventsScope';
 import { type TileMapTileSelection } from '../InstancesEditor/TileSetVisualizer';
+import { extractAsCustomObject } from './CustomObjectExtractor/CustomObjectExtractor';
 
 const gd: libGDevelop = global.gd;
 
@@ -111,7 +116,6 @@ type Props = {|
 
   getInitialInstancesEditorSettings: () => InstancesEditorSettings,
 
-  onEditObject?: ?(object: gdObject) => void,
   onOpenMoreSettings?: ?() => void,
   onOpenEvents: (sceneName: string) => void,
   onObjectEdited: (objectWithContext: ObjectWithContext) => void,
@@ -123,6 +127,10 @@ type Props = {|
   unsavedChanges?: ?UnsavedChanges,
   openBehaviorEvents: (extensionName: string, behaviorName: string) => void,
   onExtractAsExternalLayout?: (name: string) => void,
+  onExtractAsEventBasedObject: (
+    extensionName: string,
+    eventsBasedObjectName: string
+  ) => void,
 
   // Preview:
   hotReloadPreviewButtonProps: HotReloadPreviewButtonProps,
@@ -146,6 +154,7 @@ type State = {|
   newObjectInstanceSceneCoordinates: ?[number, number],
   invisibleLayerOnWhichInstancesHaveJustBeenAdded: string | null,
   extractAsExternalLayoutDialogOpen: boolean,
+  extractAsCustomObjectDialogOpen: boolean,
 
   editedGroup: gdObjectGroup | null,
   isCreatingNewGroup: boolean,
@@ -161,6 +170,8 @@ type State = {|
   selectedLayer: string,
 
   tileMapTileSelection: ?TileMapTileSelection,
+
+  lastSelectionType: 'instance' | 'object',
 |};
 
 type CopyCutPasteOptions = {|
@@ -196,6 +207,7 @@ export default class SceneEditor extends React.Component<Props, State> {
       editedGroup: null,
       isCreatingNewGroup: false,
       extractAsExternalLayoutDialogOpen: false,
+      extractAsCustomObjectDialogOpen: false,
 
       instancesEditorSettings: props.getInitialInstancesEditorSettings(),
       history: getHistoryInitialState(props.initialInstances, {
@@ -215,6 +227,8 @@ export default class SceneEditor extends React.Component<Props, State> {
       selectedObjectFolderOrObjectsWithContext: [],
       selectedLayer: BASE_LAYER_NAME,
       invisibleLayerOnWhichInstancesHaveJustBeenAdded: null,
+
+      lastSelectionType: 'instance',
     };
   }
 
@@ -499,6 +513,22 @@ export default class SceneEditor extends React.Component<Props, State> {
       this.editObject(globalObjectsContainer.getObject(objectName), initialTab);
   };
 
+  editObjectInPropertiesPanel = (objectName: string) => {
+    const objectFolderOrObjectWithContext = getObjectFolderOrObjectWithContextFromObjectName(
+      this.props.globalObjectsContainer,
+      this.props.objectsContainer,
+      objectName
+    );
+    if (!objectFolderOrObjectWithContext) return;
+
+    this.setState({
+      selectedObjectFolderOrObjectsWithContext: [
+        objectFolderOrObjectWithContext,
+      ],
+      lastSelectionType: 'object',
+    });
+  };
+
   _editObjectGroup = (group: ?gdObjectGroup) => {
     this.setState({ editedGroup: group, isCreatingNewGroup: false });
   };
@@ -583,6 +613,7 @@ export default class SceneEditor extends React.Component<Props, State> {
 
     this.setState(
       {
+        lastSelectionType: 'object',
         selectedObjectFolderOrObjectsWithContext,
       },
       () => {
@@ -686,7 +717,10 @@ export default class SceneEditor extends React.Component<Props, State> {
   _onInstancesSelected = (instances: Array<gdInitialInstance>) => {
     if (instances.length === 0) {
       this.setState(
-        { selectedObjectFolderOrObjectsWithContext: [] },
+        {
+          lastSelectionType: 'instance',
+          selectedObjectFolderOrObjectsWithContext: [],
+        },
         this.updateToolbar
       );
       return;
@@ -702,6 +736,7 @@ export default class SceneEditor extends React.Component<Props, State> {
     ) {
       this.setState(
         {
+          lastSelectionType: 'instance',
           selectedObjectFolderOrObjectsWithContext: [
             {
               objectFolderOrObject: globalObjectsContainer
@@ -716,6 +751,7 @@ export default class SceneEditor extends React.Component<Props, State> {
     } else if (objectsContainer.hasObjectNamed(objectName)) {
       this.setState(
         {
+          lastSelectionType: 'instance',
           selectedObjectFolderOrObjectsWithContext: [
             {
               objectFolderOrObject: objectsContainer
@@ -803,6 +839,7 @@ export default class SceneEditor extends React.Component<Props, State> {
 
       viewControls.centerViewOnLastInstance(instances, offset);
     }
+    this.setState({ lastSelectionType: 'instance' });
     this.updateToolbar();
   };
 
@@ -1282,9 +1319,8 @@ export default class SceneEditor extends React.Component<Props, State> {
   };
 
   zoomToFitSelection = () => {
-    const selectedInstances = this.instancesSelection.getSelectedInstances();
     if (this.editorDisplay)
-      this.editorDisplay.viewControls.zoomToFitSelection(selectedInstances);
+      this.editorDisplay.viewControls.zoomToFitSelection();
   };
 
   getContextMenuZoomItems = (i18n: I18nType) => {
@@ -1378,6 +1414,11 @@ export default class SceneEditor extends React.Component<Props, State> {
         },
       },
       { type: 'separator' },
+      {
+        label: i18n._(t`Extract as a custom object`),
+        click: () => this.setState({ extractAsCustomObjectDialogOpen: true }),
+        enabled: hasSelectedInstances,
+      },
       this.props.layout && {
         label: i18n._(t`Extract as an external layout`),
         click: () => this.setState({ extractAsExternalLayoutDialogOpen: true }),
@@ -1655,6 +1696,40 @@ export default class SceneEditor extends React.Component<Props, State> {
     onExtractAsExternalLayout(newName);
   };
 
+  extractAsCustomObject = (
+    chosenExtensionName: string,
+    isNewExtension: boolean,
+    chosenEventsBasedObjectName: string,
+    shouldRemoveSceneObjectsWhenNoMoreInstance: boolean
+  ) => {
+    const {
+      project,
+      globalObjectsContainer,
+      objectsContainer,
+      initialInstances,
+      onExtractAsEventBasedObject,
+    } = this.props;
+    const { editorDisplay, deleteSelection, instancesSelection } = this;
+    if (!onExtractAsEventBasedObject || !editorDisplay) return;
+
+    extractAsCustomObject({
+      project,
+      globalObjects: globalObjectsContainer,
+      sceneObjects: objectsContainer,
+      initialInstances,
+      chosenExtensionName,
+      isNewExtension,
+      chosenEventsBasedObjectName,
+      shouldRemoveSceneObjectsWhenNoMoreInstance,
+      selectedInstances: instancesSelection.getSelectedInstances(),
+      selectionAABB: editorDisplay.instancesHandlers.getSelectionAABB(),
+      deleteSelection,
+      onExtractAsEventBasedObject,
+    });
+
+    this.setState({ extractAsCustomObjectDialogOpen: false });
+  };
+
   onSelectAllInstancesOfObjectInLayout = (objectName: string) => {
     const { initialInstances } = this.props;
     const instancesToSelect = getInstancesInLayoutForObject(
@@ -1701,8 +1776,7 @@ export default class SceneEditor extends React.Component<Props, State> {
   };
 
   forceUpdatePropertiesEditor = () => {
-    if (this.editorDisplay)
-      this.editorDisplay.forceUpdateInstancesPropertiesEditor();
+    if (this.editorDisplay) this.editorDisplay.forceUpdatePropertiesEditor();
   };
 
   forceUpdateCustomObjectRenderedInstances = () => {
@@ -1843,7 +1917,7 @@ export default class SceneEditor extends React.Component<Props, State> {
                 layersContainer={this.props.layersContainer}
                 globalObjectsContainer={this.props.globalObjectsContainer}
                 objectsContainer={this.props.objectsContainer}
-                onEditObject={this.props.onEditObject || this.editObject}
+                onEditObject={this.editObject}
                 onEditObjectVariables={object => {
                   this.editObject(object, 'variables');
                 }}
@@ -1873,6 +1947,7 @@ export default class SceneEditor extends React.Component<Props, State> {
                 editLayerEffects={this.editLayerEffects}
                 editInstanceVariables={this.editInstanceVariables}
                 editObjectByName={this.editObjectByName}
+                editObjectInPropertiesPanel={this.editObjectInPropertiesPanel}
                 selectedObjectFolderOrObjectsWithContext={
                   selectedObjectFolderOrObjectsWithContext
                 }
@@ -1894,7 +1969,7 @@ export default class SceneEditor extends React.Component<Props, State> {
                 onRenameObjectGroup={this._onRenameObjectGroup}
                 canObjectOrGroupBeGlobal={this.canObjectOrGroupBeGlobal}
                 updateBehaviorsSharedData={this.updateBehaviorsSharedData}
-                onEditObject={this.props.onEditObject || this.editObject}
+                onEditObject={this.editObject}
                 onRenameObjectFolderOrObjectWithContextFinish={
                   this._onRenameObjectFolderOrObjectWithContextFinish
                 }
@@ -1954,6 +2029,7 @@ export default class SceneEditor extends React.Component<Props, State> {
                 }
                 isActive={isActive}
                 onOpenedEditorsChanged={this.updateToolbar}
+                lastSelectionType={this.state.lastSelectionType}
               />
               <I18n>
                 {({ i18n }) => (
@@ -2184,6 +2260,19 @@ export default class SceneEditor extends React.Component<Props, State> {
                         onApply={chosenName =>
                           this.extractAsExternalLayout(chosenName)
                         }
+                      />
+                    )}
+                    {this.state.extractAsCustomObjectDialogOpen && (
+                      <ExtractAsCustomObjectDialog
+                        project={project}
+                        initialInstances={this.props.initialInstances}
+                        selectedInstances={this.instancesSelection.getSelectedInstances()}
+                        onCancel={() =>
+                          this.setState({
+                            extractAsCustomObjectDialogOpen: false,
+                          })
+                        }
+                        onApply={this.extractAsCustomObject}
                       />
                     )}
                     <DismissableInfoBar

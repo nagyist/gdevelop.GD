@@ -400,8 +400,8 @@ namespace gdjs {
       this.density = behaviorData.density;
       this.friction = behaviorData.friction;
       this.restitution = behaviorData.restitution;
-      this.linearDamping = behaviorData.linearDamping;
-      this.angularDamping = behaviorData.angularDamping;
+      this.linearDamping = Math.max(0, behaviorData.linearDamping);
+      this.angularDamping = Math.max(0, behaviorData.angularDamping);
       this.gravityScale = behaviorData.gravityScale;
       this.layers = behaviorData.layers;
       this.masks = behaviorData.masks;
@@ -897,16 +897,21 @@ namespace gdjs {
       // Generate the body definition
       const bodyDef = new Box2D.b2BodyDef();
 
+      const x =
+        (this.owner.getDrawableX() + this.owner.getWidth() / 2) *
+        this._sharedData.worldInvScale;
+      const y =
+        (this.owner.getDrawableY() + this.owner.getHeight() / 2) *
+        this._sharedData.worldInvScale;
+
       // Set the initial body transformation from the GD object
       bodyDef.set_position(
-        this.b2Vec2(
-          (this.owner.getDrawableX() + this.owner.getWidth() / 2) *
-            this._sharedData.worldInvScale,
-          (this.owner.getDrawableY() + this.owner.getHeight() / 2) *
-            this._sharedData.worldInvScale
-        )
+        this.b2Vec2(Number.isFinite(x) ? x : 0, Number.isFinite(y) ? y : 0)
       );
-      bodyDef.set_angle(gdjs.toRad(this.owner.getAngle()));
+      const angle = gdjs.toRad(this.owner.getAngle());
+      if (Number.isFinite(angle)) {
+        bodyDef.set_angle(angle);
+      }
 
       // Set body settings
       bodyDef.set_type(
@@ -1014,13 +1019,21 @@ namespace gdjs {
         this._objectOldY !== this.owner.getY() ||
         this._objectOldAngle !== this.owner.getAngle()
       ) {
-        const pos = this.b2Vec2(
+        const x =
           (this.owner.getDrawableX() + this.owner.getWidth() / 2) *
-            this._sharedData.worldInvScale,
+          this._sharedData.worldInvScale;
+        const y =
           (this.owner.getDrawableY() + this.owner.getHeight() / 2) *
-            this._sharedData.worldInvScale
+          this._sharedData.worldInvScale;
+        const pos = this.b2Vec2(
+          Number.isFinite(x) ? x : body.GetPosition().x,
+          Number.isFinite(y) ? y : body.GetPosition().y
         );
-        body.SetTransform(pos, gdjs.toRad(this.owner.getAngle()));
+        const angle = gdjs.toRad(this.owner.getAngle());
+        body.SetTransform(
+          pos,
+          Number.isFinite(angle) ? angle : body.GetAngle()
+        );
         body.SetAwake(true);
       }
     }
@@ -1312,6 +1325,11 @@ namespace gdjs {
     }
 
     setLinearDamping(linearDamping: float): void {
+      // Non-negative values only
+      if (linearDamping < 0) {
+        linearDamping = 0;
+      }
+
       // Check if there is no modification
       if (this.linearDamping === linearDamping) {
         return;
@@ -1335,6 +1353,11 @@ namespace gdjs {
     }
 
     setAngularDamping(angularDamping: float): void {
+      // Non-negative values only
+      if (angularDamping < 0) {
+        angularDamping = 0;
+      }
+
       // Check if there is no modification
       if (this.angularDamping === angularDamping) {
         return;

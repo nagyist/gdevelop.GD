@@ -29,9 +29,6 @@ void EventBasedBehaviorBrowser::ExposeEvents(
       project, eventsFunctionsExtension, eventsBasedBehavior, worker);
 }
 
-void EventBasedBehaviorBrowser::ExposeObjects(
-    gd::Project &project, gd::ArbitraryObjectsWorker &worker) const {}
-
 void EventBasedBehaviorBrowser::ExposeFunctions(
     gd::Project &project, gd::ArbitraryEventsFunctionsWorker &worker) const {
   worker.Launch(eventsBasedBehavior.GetEventsFunctions());
@@ -42,8 +39,5 @@ void EventBasedBehaviorBrowser::ExposeEventBasedBehaviors(
     gd::ArbitraryEventBasedBehaviorsWorker &worker) const {
   worker.Launch(eventsBasedBehavior);
 }
-
-void EventBasedBehaviorBrowser::ExposeBehaviorSharedDatas(
-    gd::Project &project, gd::ArbitraryBehaviorSharedDataWorker &worker) const {}
 
 } // namespace gd

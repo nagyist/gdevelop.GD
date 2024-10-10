@@ -49,7 +49,7 @@ const styles = {
 
 type Props = {|
   children: React.Node,
-  title: React.Node,
+  title?: React.Node,
   titleAdornment?: React.Node,
   titleAction?: React.Node,
   subtitleText?: React.Node,
@@ -110,21 +110,23 @@ const SectionContainer = ({
               />
             </Line>
           )}
-          {title && (
+          {(title || subtitleText || renderSubtitle) && (
             <SectionRow>
-              <LineStackLayout
-                noMargin
-                alignItems="center"
-                justifyContent="space-between"
-              >
-                <LineStackLayout noMargin alignItems="center">
-                  <Text size="bold-title" noMargin style={styles.title}>
-                    {title}
-                  </Text>
-                  {titleAction}
+              {title && (
+                <LineStackLayout
+                  noMargin
+                  alignItems="center"
+                  justifyContent="space-between"
+                >
+                  <LineStackLayout noMargin alignItems="center">
+                    <Text size="bold-title" noMargin style={styles.title}>
+                      {title}
+                    </Text>
+                    {titleAction}
+                  </LineStackLayout>
+                  {titleAdornment && <Column noMargin>{titleAdornment}</Column>}
                 </LineStackLayout>
-                {titleAdornment && <Column noMargin>{titleAdornment}</Column>}
-              </LineStackLayout>
+              )}
               {subtitleText && (
                 <Line noMargin>
                   <Text noMargin>{subtitleText}</Text>

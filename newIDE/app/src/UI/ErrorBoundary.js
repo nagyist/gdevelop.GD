@@ -47,6 +47,7 @@ type ErrorBoundaryScope =
   | 'profile'
   | 'scene-editor'
   | 'scene-editor-instance-properties'
+  | 'scene-editor-object-properties'
   | 'scene-editor-objects-list'
   | 'scene-editor-object-groups-list'
   | 'scene-editor-canvas'
@@ -180,7 +181,7 @@ export const ErrorFallbackComponent = ({
 |}) => {
   const isCriticalError = error.stack && error.stack.includes('.wasm');
   return (
-    <PlaceholderMessage showOnTop={showOnTop}>
+    <PlaceholderMessage showOnTop={showOnTop} data={{ errorBoundary: 'true' }}>
       <ColumnStackLayout>
         <Line justifyContent="space-between" alignItems="center" noMargin>
           <Line>

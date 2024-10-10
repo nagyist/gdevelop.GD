@@ -27,7 +27,6 @@ import { formatTutorialToImageTileComponent, TUTORIAL_CATEGORY_TEXTS } from '.';
 import GuidedLessons from '../InAppTutorials/GuidedLessons';
 import ChevronArrowRight from '../../../../UI/CustomSvgIcons/ChevronArrowRight';
 import Upload from '../../../../UI/CustomSvgIcons/Upload';
-import WikiSearchBar from '../../../../UI/WikiSearchBar';
 import FlingGame from '../InAppTutorials/FlingGame';
 import AuthenticatedUserContext from '../../../../Profile/AuthenticatedUserContext';
 import { type Limits } from '../../../../Utils/GDevelopServices/Usage';
@@ -189,10 +188,7 @@ const MainPage = ({
   ] = React.useState<Tutorial | null>(null);
 
   return (
-    <SectionContainer title={<Trans>Help and guides</Trans>}>
-      <SectionRow>
-        <WikiSearchBar />
-      </SectionRow>
+    <SectionContainer>
       <SectionRow>
         <Line noMargin>
           <GridList

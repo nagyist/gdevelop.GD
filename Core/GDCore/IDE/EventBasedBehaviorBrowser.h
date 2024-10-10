@@ -67,7 +67,7 @@ public:
    * \brief Do nothing.
    */
   void ExposeObjects(gd::Project &project,
-                     gd::ArbitraryObjectsWorker &worker) const override;
+                     gd::ArbitraryObjectsWorker &worker) const override {};
 
   /**
    * \brief Call the specified worker on the event-based behavior.
@@ -80,7 +80,7 @@ public:
    * \brief Do nothing.
    */
   void ExposeBehaviorSharedDatas(gd::Project &project,
-                         gd::ArbitraryBehaviorSharedDataWorker &worker) const override;
+                         gd::ArbitraryBehaviorSharedDataWorker &worker) const override {};
 
 private:
   const gd::EventsFunctionsExtension &eventsFunctionsExtension;

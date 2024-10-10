@@ -27,6 +27,7 @@ TextObject::TextObject()
       underlined(false),
       color("0;0;0"),
       textAlignment("left"),
+      verticalTextAlignment("top"),
       isOutlineEnabled(false),
       outlineThickness(2),
       outlineColor("255;255;255"),
@@ -67,6 +68,10 @@ bool TextObject::UpdateProperty(const gd::String& propertyName,
   }
   if (propertyName == "textAlignment") {
     textAlignment = newValue;
+    return true;
+  }
+  if (propertyName == "verticalTextAlignment") {
+    verticalTextAlignment = newValue;
     return true;
   }
   if (propertyName == "isOutlineEnabled") {
@@ -158,76 +163,95 @@ std::map<gd::String, gd::PropertyDescriptor> TextObject::GetProperties() const {
       .AddExtraInfo("left")
       .AddExtraInfo("center")
       .AddExtraInfo("right")
-      .SetLabel(_("Alignment, when multiple lines are displayed"))
+      .SetLabel(_("Alignment"))
+      .SetDescription(_("Alignment of the text when multiple lines are displayed"))
       .SetGroup(_("Font"))
       .SetQuickCustomizationVisibility(gd::QuickCustomization::Hidden);
+
+  objectProperties["verticalTextAlignment"]
+      .SetValue(verticalTextAlignment)
+      .SetType("choice")
+      .AddExtraInfo("top")
+      .AddExtraInfo("center")
+      .AddExtraInfo("bottom")
+      .SetLabel(_("Vertical alignment"))
+      .SetGroup(_("Font"));
 
   objectProperties["isOutlineEnabled"]
       .SetValue(isOutlineEnabled ? "true" : "false")
       .SetType("boolean")
-      .SetLabel(_("Outline"))
+      .SetLabel(_("Show outline"))
       .SetGroup(_("Outline"))
+      .SetAdvanced()
       .SetQuickCustomizationVisibility(gd::QuickCustomization::Hidden);
 
   objectProperties["outlineColor"]
       .SetValue(outlineColor)
       .SetType("color")
-      .SetLabel(_("Outline color"))
+      .SetLabel(_("Color"))
       .SetGroup(_("Outline"))
+      .SetAdvanced()
       .SetQuickCustomizationVisibility(gd::QuickCustomization::Hidden);
 
   objectProperties["outlineThickness"]
       .SetValue(gd::String::From(outlineThickness))
       .SetType("number")
-      .SetLabel(_("Outline thickness"))
+      .SetLabel(_("Thickness"))
       .SetMeasurementUnit(gd::MeasurementUnit::GetPixel())
       .SetGroup(_("Outline"))
+      .SetAdvanced()
       .SetQuickCustomizationVisibility(gd::QuickCustomization::Hidden);
 
   objectProperties["isShadowEnabled"]
       .SetValue(isShadowEnabled ? "true" : "false")
       .SetType("boolean")
-      .SetLabel(_("Shadow"))
+      .SetLabel(_("Show shadow"))
       .SetGroup(_("Shadow"))
+      .SetAdvanced()
       .SetQuickCustomizationVisibility(gd::QuickCustomization::Hidden);
 
   objectProperties["shadowColor"]
       .SetValue(shadowColor)
       .SetType("color")
-      .SetLabel(_("Shadow color"))
+      .SetLabel(_("Color"))
       .SetGroup(_("Shadow"))
+      .SetAdvanced()
       .SetQuickCustomizationVisibility(gd::QuickCustomization::Hidden);
 
   objectProperties["shadowOpacity"]
       .SetValue(gd::String::From(shadowOpacity))
       .SetType("number")
-      .SetLabel(_("Shadow opacity"))
+      .SetLabel(_("Opacity"))
       .SetMeasurementUnit(gd::MeasurementUnit::GetPixel())
       .SetGroup(_("Shadow"))
+      .SetAdvanced()
       .SetQuickCustomizationVisibility(gd::QuickCustomization::Hidden);
 
   objectProperties["shadowAngle"]
       .SetValue(gd::String::From(shadowAngle))
       .SetType("number")
-      .SetLabel(_("Shadow angle"))
+      .SetLabel(_("Angle"))
       .SetMeasurementUnit(gd::MeasurementUnit::GetDegreeAngle())
       .SetGroup(_("Shadow"))
+      .SetAdvanced()
       .SetQuickCustomizationVisibility(gd::QuickCustomization::Hidden);
 
   objectProperties["shadowDistance"]
       .SetValue(gd::String::From(shadowDistance))
       .SetType("number")
-      .SetLabel(_("Shadow distance"))
+      .SetLabel(_("Distance"))
       .SetMeasurementUnit(gd::MeasurementUnit::GetPixel())
       .SetGroup(_("Shadow"))
+      .SetAdvanced()
       .SetQuickCustomizationVisibility(gd::QuickCustomization::Hidden);
 
   objectProperties["shadowBlurRadius"]
       .SetValue(gd::String::From(shadowBlurRadius))
       .SetType("number")
-      .SetLabel(_("Shadow blur radius"))
+      .SetLabel(_("Blur radius"))
       .SetMeasurementUnit(gd::MeasurementUnit::GetPixel())
       .SetGroup(_("Shadow"))
+      .SetAdvanced()
       .SetQuickCustomizationVisibility(gd::QuickCustomization::Hidden);
 
   return objectProperties;
@@ -242,6 +266,7 @@ void TextObject::DoUnserializeFrom(gd::Project& project,
 
   SetFontName(content.GetChild("font", 0, "Font").GetValue().GetString());
   SetTextAlignment(content.GetChild("textAlignment").GetValue().GetString());
+  SetVerticalTextAlignment(content.GetStringAttribute("verticalTextAlignment", "top"));
   SetCharacterSize(content.GetChild("characterSize", 0, "CharacterSize")
                        .GetValue()
                        .GetInt());
@@ -311,6 +336,7 @@ void TextObject::DoSerializeTo(gd::SerializerElement& element) const {
   content.AddChild("text").SetValue(GetText());
   content.AddChild("font").SetValue(GetFontName());
   content.AddChild("textAlignment").SetValue(GetTextAlignment());
+  content.AddChild("verticalTextAlignment").SetValue(GetVerticalTextAlignment());
   content.AddChild("characterSize").SetValue(GetCharacterSize());
   content.AddChild("color").SetValue(GetColor());
 

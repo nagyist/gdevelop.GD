@@ -733,10 +733,9 @@ export class ObjectJsImplementation extends ObjectConfiguration {
   updateProperty(name: string, value: string): boolean;
   getInitialInstanceProperties(instance: InitialInstance): MapStringPropertyDescriptor;
   updateInitialInstanceProperty(instance: InitialInstance, name: string, value: string): boolean;
-  getRawJSONContent(): string;
-  setRawJSONContent(newContent: string): ObjectJsImplementation;
   serializeTo(element: SerializerElement): void;
   unserializeFrom(project: Project, element: SerializerElement): void;
+  content: Record<string, any>;
 }
 
 export class CustomObjectConfiguration extends ObjectConfiguration {
@@ -751,6 +750,8 @@ export class CustomObjectConfiguration extends ObjectConfiguration {
   getInitialInstanceProperties(instance: InitialInstance): MapStringPropertyDescriptor;
   updateInitialInstanceProperty(instance: InitialInstance, name: string, value: string): boolean;
   getAnimations(): SpriteAnimationList;
+  isChildObjectFolded(childName: string): boolean;
+  setChildObjectFolded(childName: string, folded: boolean): void;
   static getEdgeAnchorFromString(value: string): CustomObjectConfiguration_EdgeAnchor;
 }
 
@@ -1145,6 +1146,7 @@ export class InitialInstancesContainer extends EmscriptenObject {
   removeAllInstancesOnLayer(layer: string): void;
   removeInitialInstancesOfObject(obj: string): void;
   hasInstancesOfObject(objectName: string): boolean;
+  isInstancesCountOfObjectGreaterThan(objectName: string, minInstanceCount: number): boolean;
   someInstancesAreOnLayer(layer: string): boolean;
   renameInstancesOfObject(oldName: string, newName: string): void;
   removeInstance(inst: InitialInstance): void;
@@ -1525,9 +1527,12 @@ export class ObjectMetadata extends EmscriptenObject {
   isHidden(): boolean;
   markAsRenderedIn3D(): ObjectMetadata;
   isRenderedIn3D(): boolean;
+  setOpenFullEditorLabel(label: string): ObjectMetadata;
+  getOpenFullEditorLabel(): string;
 }
 
-export class QuickCustomization extends EmscriptenObject {static Default = 0;
+export class QuickCustomization extends EmscriptenObject {
+  static Default = 0;
   static Visible = 1;
   static Hidden = 2;
 }
@@ -1573,6 +1578,8 @@ export class BehaviorMetadata extends EmscriptenObject {
   setHidden(): BehaviorMetadata;
   getQuickCustomizationVisibility(): QuickCustomization_Visibility;
   setQuickCustomizationVisibility(visibility: QuickCustomization_Visibility): BehaviorMetadata;
+  setOpenFullEditorLabel(label: string): BehaviorMetadata;
+  getOpenFullEditorLabel(): string;
   get(): Behavior;
   getSharedDataInstance(): BehaviorsSharedData;
   getProperties(): MapStringPropertyDescriptor;
@@ -1664,6 +1671,7 @@ export class PlatformExtension extends EmscriptenObject {
   getAllDependencies(): VectorDependencyMetadata;
   static getNamespaceSeparator(): string;
   static getBehaviorFullType(extensionName: string, behaviorName: string): string;
+  static getObjectFullType(extensionName: string, objectName: string): string;
 }
 
 export class EventsList extends EmscriptenObject {
@@ -1857,6 +1865,7 @@ export class WholeProjectRefactorer extends EmscriptenObject {
   static applyRefactoringForGroupVariablesContainer(project: Project, globalObjectsContainer: ObjectsContainer, objectsContainer: ObjectsContainer, groupVariablesContainer: VariablesContainer, objectGroup: ObjectGroup, changeset: VariablesChangeset, originalSerializedVariables: SerializerElement): void;
   static renameEventsFunctionsExtension(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, oldName: string, newName: string): void;
   static updateExtensionNameInEventsBasedBehavior(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedBehavior: EventsBasedBehavior, sourceExtensionName: string): void;
+  static updateExtensionNameInEventsBasedObject(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedObject: EventsBasedObject, sourceExtensionName: string): void;
   static renameEventsFunction(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, oldName: string, newName: string): void;
   static renameBehaviorEventsFunction(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedBehavior: EventsBasedBehavior, oldName: string, newName: string): void;
   static renameObjectEventsFunction(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedObject: EventsBasedObject, oldName: string, newName: string): void;
@@ -1867,7 +1876,9 @@ export class WholeProjectRefactorer extends EmscriptenObject {
   static renameEventsBasedBehaviorSharedProperty(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedBehavior: EventsBasedBehavior, oldName: string, newName: string): void;
   static renameEventsBasedObjectProperty(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedObject: EventsBasedObject, oldName: string, newName: string): void;
   static renameEventsBasedBehavior(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, oldName: string, newName: string): void;
+  static updateBehaviorNameInEventsBasedBehavior(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedBehavior: EventsBasedBehavior, sourceBehaviorName: string): void;
   static renameEventsBasedObject(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, oldName: string, newName: string): void;
+  static updateObjectNameInEventsBasedObject(project: Project, eventsFunctionsExtension: EventsFunctionsExtension, eventsBasedObject: EventsBasedObject, sourceObjectName: string): void;
   static renameLayout(project: Project, oldName: string, newName: string): void;
   static renameExternalLayout(project: Project, oldName: string, newName: string): void;
   static renameExternalEvents(project: Project, oldName: string, newName: string): void;
@@ -2544,6 +2555,17 @@ export class Model3DObjectConfiguration extends ObjectConfiguration {
   hasNoAnimations(): boolean;
   swapAnimations(first: number, second: number): void;
   moveAnimation(oldIndex: number, newIndex: number): void;
+  getWidth(): number;
+  getHeight(): number;
+  getDepth(): number;
+  getRotationX(): number;
+  getRotationY(): number;
+  getRotationZ(): number;
+  getModelResourceName(): string;
+  getMaterialType(): string;
+  getOriginLocation(): string;
+  getCenterLocation(): string;
+  shouldKeepAspectRatio(): boolean;
 }
 
 export class SpineAnimation extends EmscriptenObject {
@@ -2567,6 +2589,8 @@ export class SpineObjectConfiguration extends ObjectConfiguration {
   hasNoAnimations(): boolean;
   swapAnimations(first: number, second: number): void;
   moveAnimation(oldIndex: number, newIndex: number): void;
+  getScale(): number;
+  getSpineResourceName(): string;
 }
 
 export class Vector2f extends EmscriptenObject {
@@ -2604,6 +2628,8 @@ export class TextObject extends ObjectConfiguration {
   getColor(): string;
   setTextAlignment(textAlignment: string): void;
   getTextAlignment(): string;
+  setVerticalTextAlignment(value: string): void;
+  getVerticalTextAlignment(): string;
   setOutlineEnabled(enable: boolean): void;
   isOutlineEnabled(): boolean;
   setOutlineThickness(value: number): void;
@@ -2663,18 +2689,14 @@ export class ShapePainterObject extends ObjectConfiguration {
   isClearedBetweenFrames(): boolean;
   setOutlineSize(size: number): void;
   getOutlineSize(): number;
+  setOutlineColor(color: string): void;
+  getOutlineColor(): string;
   setOutlineOpacity(val: number): void;
   getOutlineOpacity(): number;
-  setOutlineColor(r: number, g: number, b: number): void;
-  getOutlineColorR(): number;
-  getOutlineColorG(): number;
-  getOutlineColorB(): number;
+  setFillColor(color: string): void;
+  getFillColor(): string;
   setFillOpacity(val: number): void;
   getFillOpacity(): number;
-  setFillColor(r: number, g: number, b: number): void;
-  getFillColorR(): number;
-  getFillColorG(): number;
-  getFillColorB(): number;
   getAntialiasing(): string;
   setAntialiasing(value: string): void;
 }
@@ -2724,18 +2746,10 @@ export class ParticleEmitterObject extends ObjectConfiguration {
   getParticleLifeTimeMin(): number;
   setParticleLifeTimeMax(newValue: number): void;
   getParticleLifeTimeMax(): number;
-  setParticleRed1(newValue: number): void;
-  getParticleRed1(): number;
-  setParticleRed2(newValue: number): void;
-  getParticleRed2(): number;
-  setParticleGreen1(newValue: number): void;
-  getParticleGreen1(): number;
-  setParticleGreen2(newValue: number): void;
-  getParticleGreen2(): number;
-  setParticleBlue1(newValue: number): void;
-  getParticleBlue1(): number;
-  setParticleBlue2(newValue: number): void;
-  getParticleBlue2(): number;
+  setParticleColor1(newValue: string): void;
+  getParticleColor1(): string;
+  setParticleColor2(newValue: string): void;
+  getParticleColor2(): string;
   setParticleAlpha1(newValue: number): void;
   getParticleAlpha1(): number;
   setParticleAlpha2(newValue: number): void;

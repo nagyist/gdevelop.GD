@@ -1114,6 +1114,7 @@ const MainFrame = (props: Props) => {
         if (error.name === 'CloudProjectReadingError') {
           setCloudProjectFileMetadataToRecover(fileMetadata);
         } else {
+          console.error('Failed to open the project:', error);
           const errorMessage = getOpenErrorMessage
             ? getOpenErrorMessage(error)
             : t`Ensure that you are connected to internet and that the URL used is correct, then try again.`;
@@ -2030,6 +2031,31 @@ const MainFrame = (props: Props) => {
 
   const onExtractAsExternalLayout = (name: string) => {
     openExternalLayout(name);
+  };
+
+  const onExtractAsEventBasedObject = (
+    extensionName: string,
+    eventsBasedObjectName: string
+  ) => {
+    if (!currentProject) return;
+    openEventsFunctionsExtension(
+      extensionName,
+      null,
+      null,
+      eventsBasedObjectName
+    );
+    if (!currentProject.hasEventsFunctionsExtensionNamed(extensionName)) {
+      return;
+    }
+    const eventsFunctionsExtension = currentProject.getEventsFunctionsExtension(
+      extensionName
+    );
+    const eventsBasedObjects = eventsFunctionsExtension.getEventsBasedObjects();
+    if (!eventsBasedObjects.has(eventsBasedObjectName)) {
+      return;
+    }
+    const eventsBasedObject = eventsBasedObjects.get(eventsBasedObjectName);
+    openCustomObjectEditor(eventsFunctionsExtension, eventsBasedObject);
   };
 
   const onEventsBasedObjectChildrenEdited = React.useCallback(
@@ -3599,6 +3625,7 @@ const MainFrame = (props: Props) => {
                     },
                     openBehaviorEvents: openBehaviorEvents,
                     onExtractAsExternalLayout: onExtractAsExternalLayout,
+                    onExtractAsEventBasedObject: onExtractAsEventBasedObject,
                     onEventsBasedObjectChildrenEdited: onEventsBasedObjectChildrenEdited,
                     onSceneObjectEdited: onSceneObjectEdited,
                   })}
