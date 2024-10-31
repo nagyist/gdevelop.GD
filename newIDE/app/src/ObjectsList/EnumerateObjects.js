@@ -212,6 +212,9 @@ export const enumerateObjectsAndGroups = (
   objectType: ?string = undefined,
   requiredBehaviorTypes?: Array<string> = []
 ) => {
+  // The objects must never be kept in a state as they may be temporary copies.
+  // Search for "ProjectScopedContainers wrongly containing temporary objects containers or objects"
+  // in the codebase.
   if (objectsContainersList.getObjectsContainersCount() === 0) {
     console.error(
       'Called enumerateObjectsAndGroups without any object container.'

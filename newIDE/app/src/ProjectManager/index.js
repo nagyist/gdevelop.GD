@@ -19,13 +19,13 @@ import UnsavedChangesContext, {
 import ProjectManagerCommands from './ProjectManagerCommands';
 import { type HotReloadPreviewButtonProps } from '../HotReload/HotReloadPreviewButton';
 import { type ExtensionShortHeader } from '../Utils/GDevelopServices/Extension';
+import { type GamesList } from '../GameDashboard/UseGamesList';
 import { type ResourceManagementProps } from '../ResourcesList/ResourceSource';
 import InstalledExtensionDetails from './InstalledExtensionDetails';
 import { useShouldAutofocusInput } from '../UI/Responsive/ScreenTypeMeasurer';
 import { addDefaultLightToAllLayers } from '../ProjectCreation/CreateProject';
 import ErrorBoundary from '../UI/ErrorBoundary';
 import useForceUpdate from '../Utils/UseForceUpdate';
-import useGamesList from '../GameDashboard/UseGamesList';
 import AuthenticatedUserContext from '../Profile/AuthenticatedUserContext';
 import { GameDetailsDialog } from '../GameDashboard/GameDetailsDialog';
 
@@ -75,6 +75,7 @@ import { type ShowConfirmDeleteDialogOptions } from '../UI/Alert/AlertContext';
 import GDevelopThemeContext from '../UI/Theme/GDevelopThemeContext';
 import { type GDevelopTheme } from '../UI/Theme';
 import { ExtensionStoreContext } from '../AssetStore/ExtensionStore/ExtensionStoreContext';
+import { type HTMLDataset } from '../Utils/HTMLDataset';
 
 export const getProjectManagerItemId = (identifier: string) =>
   `project-manager-tab-${identifier}`;
@@ -117,7 +118,7 @@ export interface TreeViewItemContent {
   getName(): string | React.Node;
   getId(): string;
   getHtmlId(index: number): ?string;
-  getDataSet(): { [string]: string };
+  getDataSet(): ?HTMLDataset;
   getThumbnail(): ?string;
   onClick(): void;
   buildMenuTemplate(i18n: I18nType, index: number): Array<MenuItemTemplate>;
@@ -227,8 +228,8 @@ class LabelTreeViewItemContent implements TreeViewItemContent {
     return this.id;
   }
 
-  getDataSet(): { [string]: string } {
-    return {};
+  getDataSet(): ?HTMLDataset {
+    return null;
   }
 
   getThumbnail(): ?string {
@@ -315,8 +316,8 @@ class ActionTreeViewItemContent implements TreeViewItemContent {
     return this.id;
   }
 
-  getDataSet(): { [string]: string } {
-    return {};
+  getDataSet(): ?HTMLDataset {
+    return null;
   }
 
   getThumbnail(): ?string {
@@ -417,6 +418,9 @@ type Props = {|
 
   // For resources:
   resourceManagementProps: ResourceManagementProps,
+
+  // Games
+  gamesList: GamesList,
 |};
 
 const ProjectManager = React.forwardRef<Props, ProjectManagerInterface>(
@@ -445,6 +449,7 @@ const ProjectManager = React.forwardRef<Props, ProjectManagerInterface>(
       onInstallExtension,
       onShareProject,
       resourceManagementProps,
+      gamesList,
     },
     ref
   ) => {
@@ -462,6 +467,7 @@ const ProjectManager = React.forwardRef<Props, ProjectManagerInterface>(
     const forceUpdate = useForceUpdate();
     const { isMobile } = useResponsiveWindowSize();
     const { showDeleteConfirmation } = useAlertDialog();
+    const { games, fetchGames, onGameUpdated } = gamesList;
 
     const forceUpdateList = React.useCallback(
       () => {
@@ -515,7 +521,6 @@ const ProjectManager = React.forwardRef<Props, ProjectManagerInterface>(
       false
     );
     const projectUuid = project.getProjectUuid();
-    const { games, fetchGames, onGameUpdated } = useGamesList();
     const { profile } = React.useContext(AuthenticatedUserContext);
     const userId = profile ? profile.id : null;
     React.useEffect(

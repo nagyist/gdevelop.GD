@@ -173,6 +173,9 @@ export default class InstructionOrObjectSelector extends React.PureComponent<
       this._scrollView.current.scrollTo(this._selectedItem.current);
     }
 
+    // The objects must never be kept in a state as they may be temporary copies.
+    // Search for "ProjectScopedContainers wrongly containing temporary objects containers or objects"
+    // in the codebase.
     const objectsContainersList = this.props.projectScopedContainersAccessor
       .get()
       .getObjectsContainersList();
@@ -298,6 +301,9 @@ export default class InstructionOrObjectSelector extends React.PureComponent<
       onClickMore,
     } = this.props;
 
+    // The objects must never be kept in a state as they may be temporary copies.
+    // Search for "ProjectScopedContainers wrongly containing temporary objects containers or objects"
+    // in the codebase.
     const objectsContainersList = projectScopedContainersAccessor
       .get()
       .getObjectsContainersList();
